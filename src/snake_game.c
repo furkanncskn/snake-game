@@ -17,7 +17,8 @@
 #define BAIT_POINT                  10
 #define STOP                        32   // ' '
 #define FOOD                        64   // @
-#define PEACE                       111 // o
+#define PEACE                       176 // o
+#define HPEACE                      178
 #define AREA_SIZE()                 (HIGHT * WIDTH)
 #define RANDOM_ROW_UPPER_MAX        (HIGHT - 2)
 #define RANDOM_ROW_UPPER_MIN        (1)
@@ -171,6 +172,8 @@ PRIVATE void set_snake(HAREA area, const HSNAKE snake)
 {
     for (int i = 0; i < snake_size; ++i)
         area[snake[i].row * WIDTH + snake[i].col] = snake[i].stomach;
+
+    area[snake[0].row * WIDTH + snake[0].col] = HPEACE;
 }
 
 /**
@@ -330,15 +333,25 @@ PRIVATE void delete_objects(HAREA* area, HSNAKE* snake, HBAIT* bait)
     free(*bait);
 }
 
+PRIVATE resetScreenPosition(void)
+{
+    HANDLE handle;
+    COORD position;
+    handle = GetStdHandle(STD_OUTPUT_HANDLE);
+    position.X = 0;
+    position.Y = 0;
+    SetConsoleCursorPosition(handle, position);
+}
+
 PRIVATE void print_area(const HAREA area)
 {
+    printf("Player = %s    Score = %d\n", "DilosDilos", get_score());
+
     for (int i = 0; i < AREA_SIZE(); ++i) {
         if (i != 0 && i % WIDTH == 0)
             printf("\n");
         printf("%c", area[i]);
     }
-
-    system("cls");
 }
 
 PUBLIC void opening_message(void)
@@ -377,8 +390,9 @@ PUBLIC void play_snake_game(const char* nick_name)
         KEY_PRESSED_OR_NOT();
         move(_direct, snake);
         eating(area, snake, bait, _direct);
-        print_area(area);
-        printf("Player = %s    Score = %d\n", nick_name, get_score());
+        resetScreenPosition();
+        print_area(area);       
+        Sleep(30);
     }
     delete_objects(&area, &snake, &bait);
 }

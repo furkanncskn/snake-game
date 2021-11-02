@@ -14,14 +14,16 @@ int main()
 {
     RANDOMIZED();
     
-    opening_message();
+    //opening_message();
     
     char nick_name[MAX_SIZE];
 
     printf("Please, enter your nickname in the game = ");
+    scanf("%s", nick_name);
 
-    if(gets_s(nick_name, MAX_SIZE))
-        play_snake_game(nick_name);
+    system("cls");
+    play_snake_game(nick_name);
+    
 
 	return 0;
 }
