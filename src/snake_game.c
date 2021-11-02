@@ -345,8 +345,6 @@ PRIVATE resetScreenPosition(void)
 
 PRIVATE void print_area(const HAREA area)
 {
-    printf("Player = %s    Score = %d\n", "DilosDilos", get_score());
-
     for (int i = 0; i < AREA_SIZE(); ++i) {
         if (i != 0 && i % WIDTH == 0)
             printf("\n");
@@ -391,8 +389,9 @@ PUBLIC void play_snake_game(const char* nick_name)
         move(_direct, snake);
         eating(area, snake, bait, _direct);
         resetScreenPosition();
+		printf("Player = %s    Score = %d\n",nick_name, get_score());
         print_area(area);       
-        Sleep(30);
+        Sleep(20);
     }
     delete_objects(&area, &snake, &bait);
 }
