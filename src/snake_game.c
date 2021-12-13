@@ -1,35 +1,21 @@
+#define _CRT_SECURE_NO_WARNINGS
+
+#include <Windows.h> // Sleep()
 #include <stdlib.h>  // srand(), rand()
 #include <stdio.h>
 #include <conio.h>   // kbhit(), _getch()
 #include <ctype.h>   // toupper()
 #include <time.h>    // time()
-#include <Windows.h> // Sleep()
 
 #include "snake_game.h"
 
 #define PUBLIC 
 #define PRIVATE static
 
-/*!< Object Like Macro Definitions */
-#define HIGHT                       25
-#define WIDTH                       50
-#define HEAD                        0
-#define BAIT_POINT                  10
-#define STOP                        32   // ' '
-#define FOOD                        64   // @
-#define PEACE                       176 // o
-#define HPEACE                      178
-#define AREA_SIZE()                 (HIGHT * WIDTH)
-#define RANDOM_ROW_UPPER_MAX        (HIGHT - 2)
-#define RANDOM_ROW_UPPER_MIN        (1)
-#define RANDOM_COL_UPPER_MAX        (WIDTH - 2)
-#define RANDOM_COL_UPPER_MIN        (1)
-
 /*!< Functional Like Macro Definitions */
+#define ISVALIDKEY(temp_direct)     ((temp_direct) == UP || (temp_direct) == DOWN || (temp_direct) == LEFT || (temp_direct) == RIGHT || (temp_direct) == STOP)
 #define RANDOM_ROW()                ((rand() % ((RANDOM_ROW_UPPER_MAX - RANDOM_ROW_UPPER_MIN) + 1)) + RANDOM_ROW_UPPER_MIN)
 #define RANDOM_COL()                ((rand() % ((RANDOM_COL_UPPER_MAX - RANDOM_COL_UPPER_MIN) + 1)) + RANDOM_COL_UPPER_MIN)
-#define ISVALIDKEY(temp_direct)     ((temp_direct) == UP || (temp_direct) == DOWN || (temp_direct) == LEFT || (temp_direct) == RIGHT || (temp_direct) == STOP)
-
 #define GAMEOVER()                      \
     do                                  \
     {                                   \
@@ -38,53 +24,25 @@
         exit(EXIT_FAILURE);             \
     } while (0);
 
-#define KEY_PRESSED_OR_NOT()       \
-    if (_kbhit())                  \
-    {                              \
-        int c = toupper(_getch()); \
-        if (ISVALIDKEY(c))         \
-        {                          \
-            _direct = c;           \
-        }                          \
-    }
-
 static int snake_size;
 
-typedef int* HAREA;
-typedef int AREA;
-
-typedef enum Direction
+static const char* srate_mode[3] =
 {
-    UP = 'W',
-    DOWN = 'S',
-    LEFT = 'A',
-    RIGHT = 'D',
-} Direction;
-
-typedef struct
-{
-    int stomach;
-    int row;
-    int col;
-} SNAKE, * HSNAKE;
-
-typedef struct
-{
-    int row;
-    int col;
-} BAID, * HBAIT;
+    "SLOW",
+    "MEDIUM",
+    "FAST",
+};
 
 /**
  * @brief Create a game area object
- * 
+ *
  * if allocates memory return non zero
  * if not allocates memory return NULL
- * 
+ *
  * @return HAREA
  */
-PRIVATE HAREA create_game_area(void)
-{
-    HAREA area = (HAREA)malloc(HIGHT * WIDTH * sizeof(AREA));
+PRIVATE HAREA createGameArea(void) {
+    HAREA area = (HAREA)calloc(1, HIGHT * WIDTH * sizeof(AREA));
     if (!area) {
         fprintf(stderr, "Out of Memory\n");
         return NULL;
@@ -95,21 +53,20 @@ PRIVATE HAREA create_game_area(void)
         area[size - 1] = ' ';
         size--;
     }
-    
+
     return area;
 }
 
 /**
  * @brief Create a snake object
- * 
+ *
  * if allocates memory return non zero
  * if not allocates memory return NULL
  *
  * @return HSNAKE
  */
-PRIVATE HSNAKE create_snake(void)
-{
-    HSNAKE snake = malloc(sizeof(SNAKE) * HIGHT * WIDTH);
+PRIVATE HSNAKE createSnake(void) {
+    HSNAKE snake = calloc(1, sizeof(SNAKE) * HIGHT * WIDTH);
     if (!snake) {
         fprintf(stderr, "Out of Memory\n");
         return NULL;
@@ -129,9 +86,8 @@ PRIVATE HSNAKE create_snake(void)
  *
  * @return HBAIT
  */
-PRIVATE HBAIT create_bait(void)
-{
-    HBAIT bait = (HBAIT)malloc(sizeof(BAID));
+PRIVATE HBAIT createBait(void) {
+    HBAIT bait = (HBAIT)calloc(1, sizeof(BAID));
     if (!bait) {
         fprintf(stderr, "Out of Memory\n");
         return NULL;
@@ -142,12 +98,46 @@ PRIVATE HBAIT create_bait(void)
 }
 
 /**
+ * @brief Create all objects
+ *
+ * @param area
+ * @param snake
+ * @param bait
+ */
+PUBLIC void createObjects(HAREA* area, HSNAKE* snake, HBAIT* bait) {
+    *area = createGameArea();
+    *snake = createSnake();
+    *bait = createBait();
+}
+
+/**
+ * @brief delete all objects
+ *
+ * @param area
+ * @param snake
+ * @param bait
+ */
+PUBLIC void deleteObjects(HAREA* area, HSNAKE* snake, HBAIT* bait) {
+    free(*area);
+    free(*snake);
+    free(*bait);
+}
+
+/**
+ * @brief Set the Rate object
+ *
+ * @param rate
+ */
+PUBLIC void setRate(Rate rate) {
+    Sleep(rate);
+}
+
+/**
  * @brief Set the window object to area
  *
  * @param area
  */
-PRIVATE void set_area(HAREA area)
-{
+PRIVATE void setArea(HAREA area) {
     for (int i = 0; i < AREA_SIZE(); ++i) {
         if (i / WIDTH < 1) // 0th row
             area[i] = '#';
@@ -168,8 +158,7 @@ PRIVATE void set_area(HAREA area)
  * @param area
  * @param snake
  */
-PRIVATE void set_snake(HAREA area, const HSNAKE snake)
-{
+PRIVATE void setSnake(HAREA area, const HSNAKE snake) {
     for (int i = 0; i < snake_size; ++i)
         area[snake[i].row * WIDTH + snake[i].col] = snake[i].stomach;
 
@@ -182,24 +171,35 @@ PRIVATE void set_snake(HAREA area, const HSNAKE snake)
  * @param area
  * @param bait
  */
-PRIVATE void set_baid(HAREA area, const HBAIT bait)
-{
+PRIVATE void setBaid(HAREA area, const HBAIT bait) {
     area[bait->row * WIDTH + bait->col] = FOOD;
 }
 
 /**
- * @brief if it is itself '1', if not '0'
+ * @brief Set all objects
  *
+ * @param area
  * @param snake
- * @return int
+ * @param bait
  */
-PRIVATE int is_yours(const HSNAKE snake)
-{
-    for (int i = 1; i < snake_size; ++i)
-        if (snake[HEAD].row == snake[i].row && snake[HEAD].col == snake[i].col)
-            return 1;
+PUBLIC void setObjects(HAREA* area, HSNAKE* snake, HBAIT* bait) {
+    setArea(*area);
+    setSnake(*area, *snake);
+    setBaid(*area, *bait);
+}
 
-    return 0;
+/**
+ * @brief if pressed invalid key, update direct
+ *
+ * @param _direct
+ */
+PUBLIC void keyPressedOrNot(int* _direct) {
+    if (_kbhit()) {
+        int c = toupper(_getch());
+        if (ISVALIDKEY(c)) {
+            *_direct = c;
+        }
+    }
 }
 
 /**
@@ -208,8 +208,7 @@ PRIVATE int is_yours(const HSNAKE snake)
  * @param direction
  * @param snake
  */
-PRIVATE void move(int direction, HSNAKE snake)
-{
+PUBLIC void move(int direction, HSNAKE snake) {
     for (int i = snake_size - 1; i > 0; --i) {
         snake[i].row = snake[i - 1].row;
         snake[i].col = snake[i - 1].col;
@@ -218,22 +217,22 @@ PRIVATE void move(int direction, HSNAKE snake)
     switch (direction) {
     case UP:
         snake[HEAD].row -= 1;
-        if ((snake[HEAD].row == 0) || is_yours(snake)) // is the up wall ?
+        if (snake[HEAD].row == 0) // is the up wall ?
             GAMEOVER();
         break;
     case DOWN:
         snake[HEAD].row += 1;
-        if ((snake[HEAD].row == HIGHT - 1) || is_yours(snake)) // is the down wall ?
+        if (snake[HEAD].row == HIGHT - 1) // is the down wall ?
             GAMEOVER();
         break;
     case LEFT:
         snake[HEAD].col -= 1;
-        if ((snake[HEAD].col == 0) || is_yours(snake)) // is the left wall ?
+        if (snake[HEAD].col == 0) // is the left wall ?
             GAMEOVER();
         break;
     case RIGHT:
         snake[HEAD].col += 1;
-        if ((snake[HEAD].col == WIDTH - 1) || is_yours(snake)) // is the rigt wall ?
+        if (snake[HEAD].col == WIDTH - 1) // is the rigt wall ?
             GAMEOVER();
         break;
     }
@@ -245,8 +244,7 @@ PRIVATE void move(int direction, HSNAKE snake)
  * @param area
  * @param bait
  */
-PRIVATE void random_baid(HAREA area, HBAIT bait)
-{
+PRIVATE void randomBaid(HAREA area, HBAIT bait) {
     area[bait->row * WIDTH + bait->col] = ' ';
     bait->row = RANDOM_ROW();
     bait->col = RANDOM_COL();
@@ -261,11 +259,10 @@ PRIVATE void random_baid(HAREA area, HBAIT bait)
  * @param bait
  * @param dir Direction
  */
-PRIVATE void eating(HAREA area, HSNAKE snake, HBAIT bait, Direction dir)
-{
+PUBLIC void eating(HAREA area, HSNAKE snake, HBAIT bait, Direction dir) {
     if (snake[HEAD].row == bait->row && snake[HEAD].col == bait->col) {
 
-        random_baid(area, bait);
+        randomBaid(area, bait);
         snake[snake_size].stomach = PEACE;
 
         switch (dir) {
@@ -292,49 +289,10 @@ PRIVATE void eating(HAREA area, HSNAKE snake, HBAIT bait, Direction dir)
 }
 
 /**
- * @brief Create all objects
+ * @brief reset cursor position
  *
- * @param area
- * @param snake
- * @param bait
  */
-PRIVATE void create_objects(HAREA* area, HSNAKE* snake, HBAIT* bait)
-{
-    *area = create_game_area();
-    *snake = create_snake();
-    *bait = create_bait();
-}
-
-/**
- * @brief Set all objects
- *
- * @param area
- * @param snake
- * @param bait
- */
-PRIVATE void set_objects(HAREA* area, HSNAKE* snake, HBAIT* bait)
-{
-    set_area(*area);
-    set_snake(*area, *snake);
-    set_baid(*area, *bait);
-}
-
-/**
- * @brief delete all objects
- *
- * @param area
- * @param snake
- * @param bait
- */
-PRIVATE void delete_objects(HAREA* area, HSNAKE* snake, HBAIT* bait)
-{
-    free(*area);
-    free(*snake);
-    free(*bait);
-}
-
-PRIVATE resetScreenPosition(void)
-{
+PUBLIC void resetScreenPosition(void) {
     HANDLE handle;
     COORD position;
     handle = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -343,8 +301,54 @@ PRIVATE resetScreenPosition(void)
     SetConsoleCursorPosition(handle, position);
 }
 
-PRIVATE void print_area(const HAREA area)
-{
+/**
+ * @brief print the openin message to the console screen
+ *
+ */
+PUBLIC void openingMessage(void) {
+    printf("The Game Rules\n\n1.If you hit the walls it's game over\n2.Every bait is %d point\n3.Press the space key to stop\n\n", BAIT_POINT);
+    printf("Press the any key to start...");
+
+    int c;
+    while (!_kbhit()) {
+        if ((c = _getch()))
+            break;
+    }
+
+    system("cls");
+}
+
+/**
+ * @brief Get the Score object
+ *
+ */
+PUBLIC size_t getScore(void) {
+    return (snake_size - 1) * BAIT_POINT;
+}
+
+/**
+ * @brief get to buffer from input buffer
+ *
+ * @param buff
+ * @param size
+ */
+PUBLIC char* getsToBuffer(char* buff, size_t size) {
+    if (!fgets(buff, size, stdin))
+        return NULL;
+    int i = 0;
+    while (buff[i++] != '\n')
+        ;
+    buff[i - 1] = '\0';
+
+    return buff;
+}
+
+/**
+ * @brief print the area to the console screen
+ *
+ * @param area
+ */
+PUBLIC void printArea(const HAREA area) {
     for (int i = 0; i < AREA_SIZE(); ++i) {
         if (i != 0 && i % WIDTH == 0)
             printf("\n");
@@ -352,47 +356,6 @@ PRIVATE void print_area(const HAREA area)
     }
 }
 
-PUBLIC void opening_message(void)
-{
-    printf("The Game Rules\n\n1.If you hit the walls it's game over\n2.If you eat yourself it's game over\n3.Every bait is %d point\n4.Press the space key to stop\n\n", BAIT_POINT);
-    printf("Press the any key to start...");
-
-    int c;
-    while (!_kbhit()) {
-        if (c = _getch())
-            break;
-    }
-
-    system("cls");
+void printGameInfo(char* nick_name, size_t score, int rate_mode) {
+    printf("Rate mode = %-6s\n\nPlayer = %-16s\nScore = %-10zu\n", srate_mode[rate_mode], nick_name, score);
 }
-
-PUBLIC size_t get_score(void)
-{
-    return (snake_size - 1) * BAIT_POINT;
-}
-
-/**
- * @brief call the function to start the game
- *
- */
-PUBLIC void play_snake_game(const char* nick_name)
-{
-    HAREA area = NULL;
-    HSNAKE snake = NULL;
-    HBAIT bait = NULL;
-    int _direct = STOP;
-
-    create_objects(&area, &snake, &bait);
-    for (;;) {
-        set_objects(&area, &snake, &bait);
-        KEY_PRESSED_OR_NOT();
-        move(_direct, snake);
-        eating(area, snake, bait, _direct);
-        resetScreenPosition();
-		printf("Player = %s    Score = %d\n",nick_name, get_score());
-        print_area(area);       
-        Sleep(20);
-    }
-    delete_objects(&area, &snake, &bait);
-}
-
